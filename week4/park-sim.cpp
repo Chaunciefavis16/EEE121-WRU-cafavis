@@ -1,250 +1,257 @@
 #include <iostream>
-#include <sstream>
-#include <vector>
 #include <ctime>
+#include <vector>
+#include <algorithm>
 #include <iomanip>
-#include <cmath>
+#include <sstream>
+#include <map>
 
 using namespace std;
 
-class Parking
+struct ParkingEntry
+{
+    string plateNumber;
+    string brand;
+    string model;
+    int year;
+    time_t entryTime;
+    time_t exitTime;
+    double totalHours;
+    double totalCost;
+
+    ParkingEntry() : exitTime(0), totalHours(0), totalCost(0) {}
+};
+
+class ParkingSystem
 {
 private:
-    struct Car_Entry
-    {
-        string plate;
-        string brand;
-        string model;
-        string year;
-        time_t entT;
-        time_t exT;
-        double tHours;
-        int tCost;
-    };
-
-    vector<Car_Entry> parkingDb;
-    vector<Car_Entry> parkingLogDb;
+    vector<ParkingEntry> currentDatabase;
+    vector<ParkingEntry> historyDatabase;
+    const int maxCurrentEntries = 500;
+    const int maxHistoryEntries = 1000;
 
 public:
-    void park(const string &plate, const string &brand, const string &model, const string &year)
+    void parseCommand(const string &command)
     {
-        for (size_t i = 0; i < parkingDb.size(); ++i)
+        cout << command << endl;
+
+        stringstream ss(command);
+        string op;
+        ss >> op;
+
+        if (op == "PARK")
         {
-            if (parkingDb[i].plate == plate)
+            parkCar(ss);
+        }
+        else if (op == "BSORT")
+        {
+            bSort();
+        }
+        else if (op == "EXIT")
+        {
+            exitCar(ss);
+        }
+        else if (op == "FIND")
+        {
+            findEntry(ss);
+        }
+        else if (op == "LIST")
+        {
+            listEntries(currentDatabase, maxCurrentEntries);
+        }
+        else if (op == "LOG")
+        {
+            listEntries(historyDatabase, maxHistoryEntries);
+        }
+        else if (op == "QUIT")
+        {
+            exit(0);
+        }
+        else
+        {
+            cout << "Unsupported command: " << op << endl;
+        }
+    }
+
+    void parkCar(stringstream &ss)
+    {
+        ParkingEntry entry;
+        ss >> entry.plateNumber >> entry.brand >> entry.model >> entry.year;
+
+        entry.entryTime = time(nullptr);
+
+        currentDatabase.push_back(entry);
+
+        // Check and remove the oldest entry if currentDatabase exceeds the limit
+        if (currentDatabase.size() > maxCurrentEntries)
+        {
+            currentDatabase.erase(currentDatabase.begin());
+        }
+    }
+
+    void exitCar(stringstream &ss)
+    {
+        string plateNumber;
+        ss >> plateNumber;
+
+        auto it = find_if(currentDatabase.begin(), currentDatabase.end(),
+                          [plateNumber](const ParkingEntry &entry)
+                          {
+                              return entry.plateNumber == plateNumber;
+                          });
+
+        if (it != currentDatabase.end())
+        {
+            // Store current time before modifying the entry
+            time_t exitTime = time(nullptr);
+
+            it->exitTime = exitTime;
+            it->totalHours = calculateDuration(it->entryTime, it->exitTime);
+            it->totalCost = calculateCost(it->totalHours);
+
+            // Move the entry to historyDatabase
+            historyDatabase.push_back(*it);
+            currentDatabase.erase(it);
+
+            // Print details in CSV format using the stored exitTime
+            cout << plateNumber << ", " << put_time(localtime(&exitTime), "%T") << ", ";
+            cout << ctime(&exitTime) << ", " << fixed << setprecision(2) << it->totalHours << ", ";
+            cout << fixed << setprecision(2) << it->totalCost << ", ";
+            cout << ctime(&it->entryTime) << ", " << it->brand << ", " << it->model << ", " << it->year << endl;
+        }
+        else
+        {
+            cout << "CAR NOT FOUND" << endl;
+        }
+    }
+
+    void findEntry(stringstream &ss)
+    {
+        string plateNumber;
+        ss >> plateNumber;
+
+        auto it = find_if(currentDatabase.begin(), currentDatabase.end(),
+                          [plateNumber](const ParkingEntry &entry)
+                          {
+                              return entry.plateNumber == plateNumber;
+                          });
+
+        if (it != currentDatabase.end())
+        {
+            cout << it->plateNumber << ", " << ctime(&it->entryTime) << ", ";
+            if (it->exitTime != 0)
             {
-                cout << "UNSUPPORTED COMMAND" << endl;
-                return;
+                cout << ctime(&it->exitTime) << ", " << fixed << setprecision(2) << it->totalHours << ", ";
+                cout << fixed << setprecision(2) << it->totalCost << ", ";
             }
-        }
-
-        Car_Entry entry;
-        entry.plate = plate;
-        entry.brand = brand;
-        entry.model = model;
-        entry.year = year;
-        entry.entT = time(NULL);
-        entry.exT = 0;
-        entry.tHours = 0;
-        entry.tCost = 0;
-        parkingDb.push_back(entry);
-    }
-
-    void exit(const string &plate)
-    {
-        for (int i = 0; i < parkingDb.size(); i++)
-        {
-            if (parkingDb[i].plate == plate)
+            else
             {
-                Car_Entry car_out = parkingDb[i];
-
-                car_out.exT = time(NULL);
-                car_out.tHours = static_cast<int>(ceil(difftime(car_out.exT, car_out.entT) / 3600));
-                if (car_out.tHours > 3)
-                {
-                    car_out.tCost = 50 + ceil((car_out.tHours - 3) * 20);
-                }
-                else
-                {
-                    car_out.tCost = 50;
-                }
-
-                parkingLogDb.push_back(car_out);
-                parkingDb.erase(parkingDb.begin() + i);
-
-                cout << car_out.plate << "," << put_time(localtime(&car_out.entT), "%T") << "," << put_time(localtime(&car_out.exT), "%T") << ","
-                     << car_out.tHours << ","
-                     << "P" << car_out.tCost << "," << put_time(localtime(&car_out.entT), "%F") << ","
-                     << car_out.brand << "," << car_out.model << "," << car_out.year << "\n"
-                     << endl;
-                return;
+                cout << "NONE, 0.00, P0, ";
             }
+            cout << ctime(&it->entryTime) << ", " << it->brand << ", " << it->model << ", " << it->year << endl;
         }
-        cout << "CAR NOT FOUND"
-             << "\n"
-             << endl;
-    }
-
-    void findCar(const string &plate)
-    {
-        for (size_t i = 0; i < parkingDb.size(); i++)
+        else
         {
-            if (parkingDb[i].plate == plate)
-            {
-                cout << parkingDb[i].plate << ", " << put_time(localtime(&parkingDb[i].entT), "%T") << ", "
-                     << put_time(localtime(&parkingDb[i].exT), "%T") << ", " << parkingDb[i].tHours << ", "
-                     << "P" << parkingDb[i].tCost << ", " << put_time(localtime(&parkingDb[i].entT), "%F") << ", "
-                     << parkingDb[i].brand << ", " << parkingDb[i].model << ", " << parkingDb[i].year << endl;
-                return;
-            }
-        }
-        cout << "CAR NOT FOUND" << endl;
-    }
-
-    void listEntries()
-    {
-        for (size_t i = 0; i < parkingDb.size(); i++)
-        {
-            cout << parkingDb[i].plate << ", " << put_time(localtime(&parkingDb[i].entT), "%T") << ", "
-                 << "NONE, "
-                 << parkingDb[i].tHours << ", "
-                 << "P" << parkingDb[i].tCost << ", " << put_time(localtime(&parkingDb[i].entT), "%F") << ", "
-                 << parkingDb[i].brand << ", " << parkingDb[i].model << ", " << parkingDb[i].year << endl;
+            cout << "CAR NOT FOUND" << endl;
         }
     }
 
-    void logEntries()
+    void listEntries(const vector<ParkingEntry> &database, int maxEntries, bool sorted = false)
+{
+    vector<ParkingEntry> entriesToDisplay = database;
+
+    if (sorted)
     {
-        for (size_t i = 0; i < parkingLogDb.size(); i++)
+        // Sort the entries before displaying
+        sort(entriesToDisplay.begin(), entriesToDisplay.end(), [](const ParkingEntry &a, const ParkingEntry &b) {
+            return a.year < b.year;
+        });
+    }
+
+    int count = 0;
+    for (const auto &entry : entriesToDisplay)
+    {
+        if (entry.exitTime != 0)
         {
-            cout << parkingLogDb[i].plate << ", " << put_time(localtime(&parkingLogDb[i].entT), "%T") << ", "
-                 << put_time(localtime(&parkingLogDb[i].exT), "%T") << ", " << parkingLogDb[i].tHours << ", "
-                 << "P" << parkingLogDb[i].tCost << ", " << put_time(localtime(&parkingLogDb[i].entT), "%F") << ", "
-                 << parkingLogDb[i].brand << ", " << parkingLogDb[i].model << ", " << parkingLogDb[i].year << endl;
+            cout << entry.plateNumber << ", " << ctime(&entry.entryTime) << ", " << ctime(&entry.exitTime) << ", " << fixed << setprecision(2) << entry.totalHours << ", " << fixed << setprecision(2) << entry.totalCost << ", ";
+            cout << ctime(&entry.entryTime) << ", " << entry.brand << ", " << entry.model << ", " << entry.year;
+        }
+        else
+        {
+            cout << entry.plateNumber << ", " << ctime(&entry.entryTime) << ", " << "NONE, 0.00, P0, " << ctime(&entry.entryTime) << ", " << entry.brand << ", " << entry.model << ", " << entry.year;
+        }
+
+        count++;
+        if (count < maxEntries)
+        {
+            cout << ", " << endl;
+        }
+        else
+        {
+            cout << endl;
+            break;
         }
     }
+}
+
 
     void bSort()
     {
-        for (int i = 0; i < parkingDb.size() - 1; i++)
+        for (int i = 0; i < currentDatabase.size() - 1; i++)
         {
-            for (size_t k = 0; k < parkingDb.size(); k++)
+            for (int j = 0; j < currentDatabase.size() - i - 1; j++)
             {
-                cout << "ITER-" << i << " : " << parkingDb[k].plate << ", " << put_time(localtime(&parkingDb[k].entT), "%T") << ", "
-                     << "NONE, "
-                     << parkingDb[k].tHours << ", "
-                     << "P" << parkingDb[k].tCost << ", " << put_time(localtime(&parkingDb[k].entT), "%F") << ", "
-                     << parkingDb[k].brand << ", " << parkingDb[k].model << ", " << parkingDb[k].year << endl;
-            }
-            for (int j = 0; j < parkingDb.size() - i - 1; j++)
-            {
-                if (parkingDb[j].year > parkingDb[j + 1].year)
+                if (currentDatabase[j].year > currentDatabase[j + 1].year)
                 {
-                    swap(parkingDb[j], parkingDb[j + 1]);
+                    swap(currentDatabase[j], currentDatabase[j + 1]);
                 }
             }
+
+            // Print the current state of the database after each iteration
+            cout << "ITER-" << i + 1 << " : ";
+            for (const auto &entry : currentDatabase)
+            {
+                cout << "ITER-" << i + 1 << ": ";
+                cout << entry.plateNumber << ", " << ctime(&entry.entryTime) << ", " << ctime(&entry.exitTime) << ", "
+                     << fixed << setprecision(2) << entry.totalHours << ", " << fixed << setprecision(2) << entry.totalCost << ", "
+                     << ctime(&entry.entryTime) << ", " << entry.brand << ", " << entry.model << ", " << entry.year << endl;
+            }
+        }
+    }
+
+    double calculateDuration(time_t entryTime, time_t exitTime)
+    {
+        return difftime(exitTime, entryTime) / 3600.0;
+    }
+
+    double calculateCost(double totalHours)
+    {
+        const double firstThreeHoursCost = 50.0;
+        const double hourlyRate = 20.0;
+
+        if (totalHours <= 3)
+        {
+            return firstThreeHoursCost;
+        }
+        else
+        {
+            return firstThreeHoursCost + hourlyRate * (totalHours - 3);
         }
     }
 };
 
 int main()
 {
-    Parking parking;
-    string statement;
+    ParkingSystem parkingSystem;
+
     while (true)
     {
-        cout << "> ";
-        getline(cin, statement);
-        stringstream ss(statement);
         string command;
-        ss >> command;
+        cout << "> ";
+        getline(cin, command);
 
-        if (command == "PARK")
-        {
-            string plate, brand, model, year;
-            if (ss >> plate >> brand >> model >> year)
-            {
-                cout << statement << endl;
-                parking.park(plate, brand, model, year);
-            }
-            else
-            {
-                cout << "UNSUPPORTED COMMAND\n";
-            }
-        }
-        else if (command == "EXIT")
-        {
-            string plate;
-            if (ss >> plate)
-            {
-                cout << statement << endl;
-                parking.exit(plate);
-            }
-            else
-            {
-                cout << "UNSUPPORTED COMMAND\n";
-            }
-        }
-        else if (command == "FIND")
-        {
-            string plate;
-            if (ss >> plate)
-            {
-                cout << statement << endl;
-                parking.findCar(plate);
-            }
-            else
-            {
-                cout << "UNSUPPORTED COMMAND\n";
-            }
-        }
-        else if (command == "LIST")
-        {
-            if (!(ss))
-            {
-                cout << "UNSUPPORTED COMMAND\n";
-            }
-            else
-            {
-                cout << statement << endl;
-                parking.listEntries();
-            }
-        }
-        else if (command == "LOG")
-        {
-            if (!(ss))
-            {
-                cout << "UNSUPPORTED COMMAND\n";
-            }
-            else
-            {
-                cout << statement << endl;
-                parking.logEntries();
-            }
-        }
-        else if (command == "BSORT")
-        {
-            if (!(ss))
-            {
-                cout << "UNSUPPORTED COMMAND\n";
-            }
-            else
-            {
-                cout << statement << endl;
-                parking.bSort();
-            }
-        }
-        // this is for part 2 else if (command == "BFIND")
-        // {  
-        // }
-        else if (command == "QUIT")
-        {
-            cout << statement << endl;
-            break;
-        }
-        else
-        {
-            cout << "UNSUPPORTED COMMAND\n";
-        }
+        parkingSystem.parseCommand(command);
     }
+
     return 0;
 }
