@@ -82,11 +82,6 @@ public:
 
         currentDatabase.push_back(entry);
 
-        // Check and remove the oldest entry if currentDatabase exceeds the limit
-        if (currentDatabase.size() > maxCurrentEntries)
-        {
-            currentDatabase.erase(currentDatabase.begin());
-        }
     }
 
     void exitCar(stringstream &ss)
