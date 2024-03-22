@@ -1,0 +1,270 @@
+#include <iostream>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
+
+using namespace std;
+
+// ParkingEntry class
+class ParkingEntry {
+public:
+    string plateNumber;
+    string brand;
+    string model;
+    int year;
+    time_t entryTime;
+    time_t exitTime;
+    double totalHours;
+    double totalCost;
+
+    ParkingEntry() : exitTime(0), totalHours(0), totalCost(0) {}
+};
+
+// Doubly Linked List Node for ParkingEntry
+class ParkEntryNode {
+public:
+    ParkingEntry data;
+    ParkEntryNode* prev;
+    ParkEntryNode* next;
+
+    ParkEntryNode(const ParkingEntry& entry) : data(entry), prev(nullptr), next(nullptr) {}
+};
+
+// Doubly Linked List for Parking Entries
+class ParkEntryList {
+public:
+    ParkEntryNode* head;
+    ParkEntryNode* tail;
+    int size;
+    int capacity;
+
+public:
+    ParkEntryList(int maxCapacity) : head(nullptr), tail(nullptr), size(0), capacity(maxCapacity) {}
+
+    ~ParkEntryList() {
+        while (head != nullptr) {
+            ParkEntryNode* temp = head;
+            head = head->next;
+            delete temp;
+        }
+    }
+
+    bool isFull() const {
+        return size >= capacity;
+    }
+
+    void enqueue(const ParkingEntry& entry) {
+        if (isFull()) {
+            cout << "PARKING FULL" << endl;
+            return;
+        }
+
+        ParkEntryNode* newNode = new ParkEntryNode(entry);
+        if (head == nullptr) {
+            head = tail = newNode;
+        } else {
+            tail->next = newNode;
+            newNode->prev = tail;
+            tail = newNode;
+        }
+        size++;
+    }
+
+    void dequeue() {
+        if (head == nullptr) {
+            return;
+        }
+
+        ParkEntryNode* temp = head;
+        head = head->next;
+        if (head != nullptr) {
+            head->prev = nullptr;
+        } else {
+            tail = nullptr;
+        }
+        delete temp;
+        size--;
+    }
+
+    void printAllEntries() const {
+        ParkEntryNode* current = head;
+        while (current != nullptr) {
+            cout << current->data.plateNumber << ", " << ctime(&current->data.entryTime) << ", ";
+            if (current->data.exitTime != 0) {
+                cout << ctime(&current->data.exitTime) << ", " << fixed << setprecision(2) << current->data.totalHours << ", ";
+                cout << fixed << setprecision(2) << current->data.totalCost << ", ";
+            } else {
+                cout << "NONE, 0.00, P0, ";
+            }
+            cout << ctime(&current->data.entryTime) << ", " << current->data.brand << ", " << current->data.model << ", " << current->data.year << endl;
+            current = current->next;
+        }
+    }
+
+    bool isEmpty() const {
+        return head == nullptr;
+    }
+
+    int getSize() const {
+        return size;
+    }
+
+    // Remove oldest entry if the list is at capacity
+    void removeOldestEntry() {
+        if (isEmpty()) {
+            return;
+        }
+
+        ParkEntryNode* temp = head;
+        head = head->next;
+        if (head != nullptr) {
+            head->prev = nullptr;
+        } else {
+            tail = nullptr;
+        }
+        delete temp;
+        size--;
+    }
+};
+
+class ParkingSystem {
+private:
+    ParkEntryList mainDatabase;
+    ParkEntryList historyDatabase;
+    const int MAX_PARKING_CAPACITY;
+    const int PARKING_HISTORY_CAPACITY;
+
+public:
+    ParkingSystem(int maxParkingCapacity, int parkingHistoryCapacity)
+        : mainDatabase(maxParkingCapacity), historyDatabase(parkingHistoryCapacity),
+          MAX_PARKING_CAPACITY(maxParkingCapacity), PARKING_HISTORY_CAPACITY(parkingHistoryCapacity) {}
+
+    void parseCommand(const string& command) {
+        cout << command << endl;
+
+        stringstream ss(command);
+        string op;
+        ss >> op;
+
+        if (op == "PARK") {
+            parkCar(ss);
+        } else if (op == "EXIT") {
+            exitCar(ss);
+        } else if (op == "FIND") {
+            findEntry(ss);
+        } else if (op == "LIST") {
+            listEntries(mainDatabase);
+        } else if (op == "LOG") {
+            listEntries(historyDatabase);
+        } else if (op == "QUIT") {
+            exit(0);
+        } else {
+            cout << "Unsupported command: " << op << endl;
+        }
+    }
+
+    void parkCar(stringstream& ss) {
+        if (mainDatabase.isFull()) {
+            cout << "PARKING FULL" << endl;
+            return;
+        }
+
+        ParkingEntry entry;
+        ss >> entry.plateNumber >> entry.brand >> entry.model >> entry.year;
+
+        entry.entryTime = time(nullptr);
+
+        mainDatabase.enqueue(entry);
+    }
+
+    void exitCar(stringstream& ss) {
+        string plateNumber;
+        ss >> plateNumber;
+
+        ParkEntryNode* current = mainDatabase.head;
+        while (current != nullptr) {
+            if (current->data.plateNumber == plateNumber) {
+                current->data.exitTime = time(nullptr);
+                current->data.totalHours = calculateDuration(current->data.entryTime, current->data.exitTime);
+                current->data.totalCost = calculateCost(current->data.totalHours);
+
+                historyDatabase.enqueue(current->data);
+                mainDatabase.dequeue();
+
+                // Check if historyDatabase exceeds capacity and remove oldest entry
+                while (historyDatabase.getSize() > PARKING_HISTORY_CAPACITY) {
+                    historyDatabase.removeOldestEntry();
+                }
+
+                cout << current->data.plateNumber << ", " << ctime(&current->data.entryTime) << ", " << ctime(&current->data.exitTime) << ", ";
+                cout << fixed << setprecision(2) << current->data.totalHours << ", " << fixed << setprecision(2) << current->data.totalCost << ", ";
+                cout << ctime(&current->data.entryTime) << ", " << current->data.brand << ", " << current->data.model << ", " << current->data.year << endl;
+                cout << "Car with plate number " << plateNumber << " exited successfully." << endl;
+                cout << "Duration: " << fixed << setprecision(2) << current->data.totalHours << " hours" << endl;
+                cout << "Cost: P" << fixed << setprecision(2) << current->data.totalCost << endl;
+                return;
+            }
+            current = current->next;
+        }
+
+        cout << "CAR NOT FOUND" << endl;
+    }
+
+    void findEntry(stringstream& ss) {
+        string plateNumber;
+        ss >> plateNumber;
+
+        ParkEntryNode* current = mainDatabase.head;
+        while (current != nullptr) {
+            if (current->data.plateNumber == plateNumber) {
+                cout << current->data.plateNumber << ", " << ctime(&current->data.entryTime) << ", ";
+                if (current->data.exitTime != 0) {
+                    cout << ctime(&current->data.exitTime) << ", " << fixed << setprecision(2) << current->data.totalHours << ", ";
+                    cout << fixed << setprecision(2) << current->data.totalCost << ", ";
+                } else {
+                    cout << "NONE, 0.00, P0, ";
+                }
+                cout << ctime(&current->data.entryTime) << ", " << current->data.brand << ", " << current->data.model << ", " << current->data.year << endl;
+                return;
+            }
+            current = current->next;
+        }
+
+        cout << "CAR NOT FOUND" << endl;
+    }
+
+    void listEntries(const ParkEntryList& database) {
+        database.printAllEntries();
+    }
+
+    double calculateDuration(time_t entryTime, time_t exitTime) {
+        return difftime(exitTime, entryTime) / 3600.0;
+    }
+
+    double calculateCost(double totalHours) {
+        const double firstThreeHoursCost = 50.0;
+        const double hourlyRate = 20.0;
+
+        if (totalHours <= 3) {
+            return firstThreeHoursCost;
+        } else {
+            return firstThreeHoursCost + hourlyRate * (totalHours - 3);
+        }
+    }
+};
+
+int main() {
+    const int MAX_PARKING_CAPACITY = 50;
+    const int PARKING_HISTORY_CAPACITY = 100;
+    ParkingSystem parkingSystem(MAX_PARKING_CAPACITY, PARKING_HISTORY_CAPACITY);
+
+    while (true) {
+        string command;
+        cout << "> ";
+        getline(cin, command);
+
+        parkingSystem.parseCommand(command);
+    }
+
+    return 0;
+}
