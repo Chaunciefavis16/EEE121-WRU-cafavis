@@ -26,28 +26,50 @@ public:
         buildTrie(); // creates the morse code trie, calls the insert node function
     }
 
-    void encodeMessage(string message) // does not make use of the morse trie
+    void encodeMessage(string message, MorseTrieNode *currentNode = nullptr, string currentCode = "")
+{
+    // If the currentNode is nullptr, set it to the root node
+    if (currentNode == nullptr)
     {
-        string encoded;        // Initialize an empty string to store the encoded message
-        for (char c : message) // Iterate through each character in the message
-        {
-            if (c == ' ') // If the character is a space, add a slash and a space to the encoded message
-            {
-                encoded += "/ ";
-            }
-            else if (morseCodes.find(c) != morseCodes.end()) // If the character is a valid Morse code symbol, add its Morse code to the encoded message
-            {
-                encoded += morseCodes[c] + " ";
-            }
-            else // If the character is not a valid Morse code symbol, print an error message and return
-            {
-                cout << "Error: Invalid character for encoding: " << c << endl;
-                return;
-            }
-        }
-        encoded.pop_back();      // Remove the last space from the encoded message
-        cout << encoded << endl; // Print the encoded message
+        currentNode = root;
     }
+
+    // Base case: if the message is empty, print the encoded Morse code
+    if (message.empty())
+    {
+        cout << currentCode << endl;
+        return;
+    }
+
+    // Get the first character of the message
+    char currentChar = message[0];
+
+    // If the character is a space, append a slash to the Morse code and continue with the rest of the message
+    if (currentChar == ' ')
+    {
+        encodeMessage(message.substr(1), root, currentCode + "/ ");
+    }
+    else
+    {
+        // Convert the character to uppercase
+        currentChar = toupper(currentChar);
+
+        // Determine the index for dot or dash (0 for dot, 1 for dash)
+        int index = (currentChar == '.') ? 0 : 1;
+
+        // If the next node does not exist
+        if (!currentNode->nextNodes[index])
+        {
+            // Print error message for invalid character for encoding and return
+            cout << "Error: Invalid character for encoding: " << currentChar << endl;
+            return;
+        }
+
+        // Recursively encode the rest of the message using the next node in the trie
+        encodeMessage(message.substr(1), currentNode->nextNodes[index], currentCode + currentChar);
+    }
+}
+
 
     void decodeMessage(string code) // uses the trie
     {
@@ -120,6 +142,10 @@ public:
     {
         for (char &c : input) // Iterate through each character in the input
         {
+            if (c == '\n') // Skip newline characters
+            {
+                continue;
+            }
             c = toupper(c); // Convert the character to uppercase
         }
 
