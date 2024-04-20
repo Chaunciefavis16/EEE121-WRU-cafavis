@@ -6,13 +6,11 @@
 
 using namespace std;
 
-const int BINARY_ALPHABET_SIZE = 2; // Define the binary alphabet size as 2 (0 and 1)
-
 struct TrieNode // Define a structure for the Trie node
 {
-    TrieNode *children[BINARY_ALPHABET_SIZE]; // Pointers to the children nodes
-    bool isEndOfWord;                         // Flag to indicate if the node is the end of a word
-    int count;                                // Count of how many times this node is visited during insertion
+    TrieNode *children[2]; // Pointers to the children nodes
+    bool isEndOfWord;      // Flag to indicate if the node is the end of a word
+    int count;             // Count of how many times this node is visited during insertion
 };
 
 struct Trie // Define a structure for the Trie
@@ -40,10 +38,10 @@ struct Trie // Define a structure for the Trie
         TrieNode *newNode = new TrieNode(); // Create a new node
         if (newNode)
         {
-            newNode->isEndOfWord = false;                  // Initialize the end of word flag to false
-            newNode->count = 0;                            // Initialize the count to 0
-            for (int i = 0; i < BINARY_ALPHABET_SIZE; i++) // creates two children for each node
-                newNode->children[i] = nullptr;            // Initialize the children pointers to null
+            newNode->isEndOfWord = false;       // Initialize the end of word flag to false
+            newNode->count = 0;                 // Initialize the count to 0
+            for (int i = 0; i < 2; i++)         // creates two children for each node
+                newNode->children[i] = nullptr; // Initialize the children pointers to null
         }
         return newNode;
     }
