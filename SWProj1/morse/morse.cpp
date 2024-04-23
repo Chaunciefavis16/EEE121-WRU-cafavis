@@ -27,49 +27,50 @@ public:
     }
 
     void encodeMessage(string message, MorseTrieNode *currentNode = nullptr, string currentCode = "")
-{
-    // If the currentNode is nullptr, set it to the root node
-    if (currentNode == nullptr)
     {
-        currentNode = root;
-    }
+        if (currentNode == nullptr)
+        { // Initial call, start from the root node
+            currentNode = root;
+        }
 
-    // Base case: if the message is empty, print the encoded Morse code
-    if (message.empty())
-    {
-        cout << currentCode << endl;
-        return;
-    }
-
-    // Get the first character of the message
-    char currentChar = message[0];
-
-    // If the character is a space, append a slash to the Morse code and continue with the rest of the message
-    if (currentChar == ' ')
-    {
-        encodeMessage(message.substr(1), root, currentCode + "/ ");
-    }
-    else
-    {
-        // Convert the character to uppercase
-        currentChar = toupper(currentChar);
-
-        // Determine the index for dot or dash (0 for dot, 1 for dash)
-        int index = (currentChar == '.') ? 0 : 1;
-
-        // If the next node does not exist
-        if (!currentNode->nextNodes[index])
+        // Base case: if the message is empty, print the encoded Morse code
+        if (message.empty())
         {
-            // Print error message for invalid character for encoding and return
-            cout << "Error: Invalid character for encoding: " << currentChar << endl;
+            cout << currentCode << endl;
             return;
         }
 
-        // Recursively encode the rest of the message using the next node in the trie
-        encodeMessage(message.substr(1), currentNode->nextNodes[index], currentCode + currentChar);
-    }
-}
+        char c = message[0]; // Get the first character of the message
 
+        if (c == ' ')
+        { // If the character is a space, append a slash to the Morse code and continue with the rest of the message
+            encodeMessage(message.substr(1), root, currentCode + "/ ");
+        }
+        else
+        {                   // If the character is not a space
+            c = toupper(c); // Convert the character to uppercase
+            if (morseCodes.find(c) != morseCodes.end())
+            {                              // If the character exists in the Morse codes map
+                string mc = morseCodes[c]; // Get the Morse code for the character
+                for (char m : mc)
+                {                                   // Iterate through each Morse code character
+                    int index = (m == '.') ? 0 : 1; // Determine the index of the next node based on the Morse code character
+                    if (currentNode->nextNodes[index] == nullptr)
+                    {                                                // If the next node is null
+                        cout << "Error: Invalid Morse code" << endl; // Print an error message
+                        return;
+                    }
+                    currentNode = currentNode->nextNodes[index]; // Move to the next node
+                }
+                encodeMessage(message.substr(1), root, currentCode + mc + " "); // Recursively encode the rest of the message
+            }
+            else
+            {                                                                   // If the character is not found in the Morse codes map
+                cout << "Error: Invalid character for encoding: " << c << endl; // Print an error message
+                return;
+            }
+        }
+    }
 
     void decodeMessage(string code) // uses the trie
     {
@@ -151,7 +152,7 @@ public:
 
         if (input.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ") == string::npos) // If the input only contains alphanumeric characters and spaces
         {
-            encodeMessage(input); // Encode the message
+            encodeMessage(input, root); // Encode the message
         }
         else if (input.find_first_not_of(".-/ ") == string::npos) // If the input only contains Morse code characters, slashes, and spaces
         {
