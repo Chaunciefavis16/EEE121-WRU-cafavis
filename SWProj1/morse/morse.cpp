@@ -110,7 +110,15 @@ public:
                 // Accumulate the Morse character sequence
                 morseChar += c;
                 // Determine the index for dot or dash (0 for dot, 1 for dash)
-                int index = (c == '.') ? 0 : 1;
+                int index;
+                if (c == '.')
+                {
+                    index = 0;
+                }
+                else
+                {
+                    index = 1;
+                }
                 // If the next node does not exist
                 if (!currentNode->nextNodes[index])
                 {
@@ -132,7 +140,6 @@ public:
         // After processing all characters, if Morse character sequence is not empty and the current node is the end of a valid Morse code sequence
         if (!morseChar.empty() && currentNode->isEndOfWord)
         {
-
             decoded += currentNode->symbol; // Append the decoded character to the decoded message
         }
 
