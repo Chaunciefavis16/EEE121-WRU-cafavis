@@ -168,6 +168,8 @@ public:
             adjacencyList[index2][index1] = 0;
         }
         cout << "Edge deleted between vertices " << v1 << " and " << v2 << "." << endl;
+        // Decrement the edge count
+        edgeCount--;
     }
 
     void printAdjacencyList()
