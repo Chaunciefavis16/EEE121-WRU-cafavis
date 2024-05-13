@@ -163,6 +163,10 @@ public:
             vertices.erase(it);
             numVertices--;
             adjacencyList.erase(adjacencyList.begin() + index);
+            for (auto &row : adjacencyList)
+            {
+                row.erase(row.begin() + index);
+            }
             cout << "Vertex " << name << " deleted." << endl;
         }
         else
@@ -173,13 +177,6 @@ public:
 
     void addEdge(char v1, char v2, int weight = -1)
     {
-        if (weight <= 0)
-        {
-            cout << "Error: Invalid weight specified for edge addition." << endl;
-            return;
-        }
-
-        // Add union operation for disjoint sets
         int index1 = find(vertices.begin(), vertices.end(), v1) - vertices.begin();
         int index2 = find(vertices.begin(), vertices.end(), v2) - vertices.begin();
         if (index1 >= numVertices || index2 >= numVertices)
@@ -188,11 +185,12 @@ public:
             return;
         }
 
-        if (weight == -1)
+        if (adjacencyList[index1][index2] != 0)
         {
-            cout << "Error: No weight specified for edge addition." << endl;
+            cout << "Edge between " << v1 << " and " << v2 << " already exists." << endl;
             return;
         }
+
         adjacencyList[index1][index2] = weight;
         if (!isDirected)
         {
@@ -201,33 +199,6 @@ public:
         cout << "Edge added between vertices " << v1 << " and " << v2 << " with weight " << weight << "." << endl;
         // Increment the edge count
         edgeCount++;
-        unionSets(index1, index2);
-    }
-    // New function to print disjoint sets
-    void printSets()
-    {
-        // Map to store disjoint sets
-        unordered_map<int, vector<char>> sets;
-
-        // Iterate through vertices to find disjoint sets
-        for (int i = 0; i < numVertices; ++i)
-        {
-            int root = findSet(i);
-            sets[root].push_back(vertices[i]);
-        }
-
-        // Print disjoint sets
-        cout << "Disjoint sets:" << endl;
-        for (const auto &entry : sets)
-        {
-            cout << "{";
-            for (char node : entry.second)
-            {
-                cout << " " << node;
-            }
-            cout << " } ";
-        }
-        cout << endl;
     }
 
     void deleteEdge(char v1, char v2)
@@ -239,13 +210,18 @@ public:
             cout << "Invalid vertices specified for edge deletion." << endl;
             return;
         }
+        if (adjacencyList[index1][index2] == 0)
+        {
+            cout << "Edge between " << v1 << " and " << v2 << " does not exist." << endl;
+            return;
+        }
         adjacencyList[index1][index2] = 0;
         if (!isDirected)
         {
             adjacencyList[index2][index1] = 0;
         }
         cout << "Edge deleted between vertices " << v1 << " and " << v2 << "." << endl;
-edgeCount--;
+        edgeCount--;
     }
 
     void printAdjacencyList()
@@ -269,69 +245,50 @@ edgeCount--;
 
     void shortestPath(char source, char destination)
     {
-        int sourceIndex = find(vertices.begin(), vertices.end(), source) - vertices.begin();
-        int destinationIndex = find(vertices.begin(), vertices.end(), destination) - vertices.begin();
+        // Implementation of Dijkstra's algorithm
+        // ...
+    }
 
-        // Check if source and destination nodes exist
-        if (sourceIndex >= numVertices || destinationIndex >= numVertices)
+    void updateDisjointSets()
+    {
+        makeSet(numVertices); // Reinitialize disjoint sets
+
+        for (int i = 0; i < numVertices; ++i)
         {
-            cout << "Invalid source or destination node." << endl;
-            return;
-        }
-
-        // Initialize distances and predecessors
-        vector<int> distance(numVertices, numeric_limits<int>::max());
-        vector<int> predecessor(numVertices, -1);
-        distance[sourceIndex] = 0;
-
-        // Priority queue to store vertices and their distances
-        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq;
-        pq.push({0, sourceIndex});
-
-        // Process vertices using Dijkstra's algorithm
-        while (!pq.empty())
-        {
-            // Print the current state of the table
-            cout << "Vertex ds[v] pre[v]" << endl;
-            for (int i = 0; i < numVertices; ++i)
+            for (int j = i + 1; j < numVertices; ++j)
             {
-                cout << vertices[i] << setw(7) << distance[i];
-                if (predecessor[i] != -1)
-                    cout << setw(8) << vertices[predecessor[i]] << endl;
-                else
-                    cout << setw(8) << "-" << endl;
-            }
-            cout << endl;
-
-            int u = pq.top().second;
-            pq.pop();
-
-            for (int v = 0; v < numVertices; ++v)
-            {
-                if (adjacencyList[u][v] != 0)
+                if (adjacencyList[i][j] != 0)
                 {
-                    int weight = adjacencyList[u][v];
-                    if (distance[v] > distance[u] + weight)
-                    {
-                        distance[v] = distance[u] + weight;
-                        predecessor[v] = u;
-                        pq.push({distance[v], v});
-                    }
+                    unionSets(i, j);
                 }
             }
         }
+    }
 
-        // Print shortest path
-        cout << "Shortest path from " << source << " to " << destination << ": ";
-        vector<char> path;
-        for (int v = destinationIndex; v != -1; v = predecessor[v])
+    void printSets()
+    {
+        updateDisjointSets();
+
+        // Map to store disjoint sets
+        unordered_map<int, vector<char>> sets;
+
+        // Iterate through vertices to find disjoint sets
+        for (int i = 0; i < numVertices; ++i)
         {
-            path.push_back(vertices[v]);
+            int root = findSet(i);
+            sets[root].push_back(vertices[i]);
         }
-        reverse(path.begin(), path.end());
-        for (char vertex : path)
+
+        // Print disjoint sets
+        cout << "Disjoint sets:" << endl;
+        for (const auto &entry : sets)
         {
-            cout << vertex << " ";
+            cout << "{";
+            for (char node : entry.second)
+            {
+                cout << " " << node;
+            }
+            cout << " } ";
         }
         cout << endl;
     }
