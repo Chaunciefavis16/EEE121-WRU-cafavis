@@ -245,8 +245,71 @@ public:
 
     void shortestPath(char source, char destination)
     {
-        // Implementation of Dijkstra's algorithm
-        // ...
+        int sourceIndex = find(vertices.begin(), vertices.end(), source) - vertices.begin();
+        int destinationIndex = find(vertices.begin(), vertices.end(), destination) - vertices.begin();
+
+        // Check if source and destination nodes exist
+        if (sourceIndex >= numVertices || destinationIndex >= numVertices)
+        {
+            cout << "Invalid source or destination node." << endl;
+            return;
+        }
+
+        // Initialize distances and predecessors
+        vector<int> distance(numVertices, numeric_limits<int>::max());
+        vector<int> predecessor(numVertices, -1);
+        distance[sourceIndex] = 0;
+
+        // Priority queue to store vertices and their distances
+        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq;
+        pq.push({0, sourceIndex});
+
+        // Process vertices using Dijkstra's algorithm
+        while (!pq.empty())
+        {
+            // Print the current state of the table
+            cout << "Vertex ds[v] pre[v]" << endl;
+            for (int i = 0; i < numVertices; ++i)
+            {
+                cout << vertices[i] << setw(7) << distance[i];
+                if (predecessor[i] != -1)
+                    cout << setw(8) << vertices[predecessor[i]] << endl;
+                else
+                    cout << setw(8) << "-" << endl;
+            }
+            cout << endl;
+
+            int u = pq.top().second;
+            pq.pop();
+
+            for (int v = 0; v < numVertices; ++v)
+            {
+                if (adjacencyList[u][v] != 0)
+                {
+                    int weight = adjacencyList[u][v];
+                    if (distance[v] > distance[u] + weight)
+                    {
+                        distance[v] = distance[u] + weight;
+                        predecessor[v] = u;
+                        pq.push({distance[v], v});
+                    }
+                }
+            }
+        }
+
+        // Print shortest path
+        cout << "Shortest path from " << source << " to " << destination << ": ";
+        vector<char> path;
+        for (int v = destinationIndex; v != -1; v = predecessor[v])
+        {
+            path.push_back(vertices[v]);
+        }
+        reverse(path.begin(), path.end());
+        for (char vertex : path)
+        {
+            cout << vertex << " ";
+        }
+        cout << endl;
     }
 
     void updateDisjointSets()
