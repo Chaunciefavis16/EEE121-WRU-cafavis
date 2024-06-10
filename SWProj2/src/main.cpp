@@ -8,8 +8,6 @@
 
 using namespace std;
 
-typedef pair<int, int> PII;
-
 // Define a typedef for a pair of integers named PII
 typedef pair<int, int> PII;
 
@@ -96,9 +94,10 @@ void shortestPathFromAirports(vector<int>& distances, const vector<int>& airport
         int u = pq.top().second;
         pq.pop();
 
-        // If the vertex is already visited, continue to the next iteration
-        if (visited[u])
+        // If the vertex is already visited, skip processing its neighbors
+        if (visited[u]) {
             continue;
+        }
 
         // Mark the vertex as visited
         visited[u] = true;
@@ -109,32 +108,35 @@ void shortestPathFromAirports(vector<int>& distances, const vector<int>& airport
             int weight = neighbor.second; // Weight of the edge between u and v
 
             // If vertex v is not visited and the distance to v through u is shorter than the current distance to v
-            if (!visited[v] && distances[u] + weight < distances[v]) {
+            if (!visited[v]) {
                 // Update the distance to vertex v
-                distances[v] = distances[u] + weight;
-                // Clear previous parents of vertex v
-                parents[v].clear();
-                // Add u as the new parent of v
-                parents[v].push_back(u);
-                // Push vertex v into the priority queue with its updated distance
-                pq.push({distances[v], v});
-            } else if (!visited[v] && distances[u] + weight == distances[v]) {
-                // If there's another shortest path to v, add u as another parent
-                parents[v].push_back(u);
+                int newDistance = distances[u] + weight;
+                if (newDistance < distances[v]) {
+                    // Clear previous parents of vertex v and add u as the new parent of v
+                    parents[v].clear();
+                    parents[v].push_back(u);
+                    // Update the distance to vertex v
+                    distances[v] = newDistance;
+                    // Push vertex v into the priority queue with its updated distance
+                    pq.push({distances[v], v});
+                } else if (newDistance == distances[v]) {
+                    // If there's another shortest path to v, add u as another parent
+                    parents[v].push_back(u);
+                }
             }
         }
     }
 }
 
 
-    // Method to find the maximum profit minimum spanning tree using Prim's algorithm
-void primMaxMST(int K, vector<pair<int, pair<int, int>>>& maxProfitEdges) {
+
+    void primMaxMST(int K, vector<pair<int, pair<int, int>>>& maxProfitEdges) {
     // Initialize a boolean array to track whether vertices are in the MST
     vector<bool> inMST(numVertices, false);
     // Priority queue to store edges based on their weights (max-heap for Prim's algorithm)
     priority_queue<pair<int, pair<int, int>>> pq;
 
-    // Initialize by pushing all edges from the first airport city
+    // Iterate through all edges from the first airport city
     for (auto &edge : adjacencyList[0]) {
         // Only consider edges among the first K cities
         if (edge.first < K) {
@@ -153,7 +155,7 @@ void primMaxMST(int K, vector<pair<int, pair<int, int>>>& maxProfitEdges) {
         int v = pq.top().second.second; // Vertex v of the edge
         pq.pop();
 
-        // If vertex v is already in the MST, continue to the next iteration
+        // If vertex v is already in the MST, skip processing its adjacent edges
         if (inMST[v]) {
             continue;
         }
@@ -164,15 +166,19 @@ void primMaxMST(int K, vector<pair<int, pair<int, int>>>& maxProfitEdges) {
         maxProfitEdges.push_back({weight, {u, v}});
 
         // Iterate through all edges adjacent to vertex v
-        for (auto &edge : adjacencyList[v]) {
+        for (auto &neighbor : adjacencyList[v]) {
+            int nextVertex = neighbor.first; // Next adjacent vertex
+            int edgeWeight = neighbor.second; // Weight of the adjacent edge
+
             // If the adjacent vertex is not in the MST and within the first K cities
-            if (!inMST[edge.first] && edge.first < K) {
+            if (!inMST[nextVertex] && nextVertex < K) {
                 // Push the edge weight along with its vertices into the priority queue
-                pq.push({edge.second, {v, edge.first}});
+                pq.push({edgeWeight, {v, nextVertex}});
             }
         }
     }
 }
+
 
 
     // Method to set the number of vertices in the graph and resize the adjacency list
@@ -183,45 +189,35 @@ void setNumVertices(int vertices) {
     adjacencyList.resize(numVertices);
 }
 
-
-   // Method to generate a DOT file representing the graph
 void generateGraphDiagramDOT(int testCaseNumber, int numCities, int numAirports, const vector<pair<int, pair<int, int>>>& maxProfitFlights, const vector<int>& cityDistances, const vector<vector<int>>& parents) {
-    // Open the output file for writing
     ofstream outFile("graph-diagram-testcase-" + to_string(testCaseNumber) + ".dot");
-    // Check if the file was opened successfully
     if (!outFile.is_open()) {
-        // Print an error message if the file failed to open
         cerr << "Failed to open output file." << endl;
-        // Return from the function
         return;
     }
 
-    // Write the header of the DOT file
     outFile << "graph G {" << endl;
     outFile << "    graph [bgcolor=white];" << endl;
     outFile << "    node [style=filled];" << endl;
 
     // Write the nodes of the graph
     for (int i = 0; i < numCities; ++i) {
-        // Determine the fill color of the node based on whether it represents a city with an airport or without
         string fillColor = (i < numAirports) ? "darkgreen" : "lightgreen";
-        // Write the node to the DOT file
         outFile << "    City" << i << " [fillcolor=" << fillColor << ", style=filled];" << endl;
     }
 
     // Highlight the maximum profit flights by updating edge attributes
     for (const auto& flight : maxProfitFlights) {
-        int u = flight.second.first;
-        int v = flight.second.second;
-        if (u > v) swap(u, v); // Ensure u is smaller than v
+        int u = flight.second.first, v = flight.second.second;
+        if (u > v) swap(u, v);
         edgeAttributes[{u, v}] = {"dashed", "blue"}; // Update edge attribute for max profit flights
     }
 
     // Highlight the shortest paths to cities with airports by updating edge attributes
     for (int i = numAirports; i < numCities; ++i) {
-        for (int parent : parents[i]) {
-            int u = parent, v = i;
-            if (u > v) swap(u, v); // Ensure u is smaller than v
+        for (int j = 0; j < parents[i].size(); ++j) {
+            int u = parents[i][j], v = i;
+            if (u > v) swap(u, v);
             edgeAttributes[{u, v}] = {"solid", "blue"}; // Update edge attribute for shortest paths to airports
         }
     }
@@ -230,34 +226,28 @@ void generateGraphDiagramDOT(int testCaseNumber, int numCities, int numAirports,
     for (int u = 0; u < numCities; ++u) {
         for (const auto& neighbor : adjacencyList[u]) {
             int v = neighbor.first;
-            // Check if the edge attributes have not been updated yet
-            if (u < v && edgeAttributes.find({u, v}) == edgeAttributes.end()) {
-                if (u < numAirports && v < numAirports) {
-                    // Both cities have airports
-                    edgeAttributes[{u, v}] = {"dashed", "black"}; // Update edge attribute for edges between airport cities
-                } else if (u >= numAirports || v >= numAirports) {
-                    // At least one city does not have an airport
-                    edgeAttributes[{u, v}] = {"solid", "black"}; // Update edge attribute for edges between airport and non-airport cities
+            if (u >= v) continue;
+            if (edgeAttributes.find({u, v}) == edgeAttributes.end()) {
+                string style = "solid", color = "black";
+                if ((u < numAirports && v < numAirports) || (u >= numAirports && v >= numAirports)) {
+                    style = "dashed"; // Update edge attribute for edges between airport cities or non-airport cities
                 }
+                edgeAttributes[{u, v}] = {style, color};
             }
         }
     }
 
     // Write edges to the DOT file after updating edge attributes
     for (const auto& edge : edgeAttributes) {
-        int u = edge.first.first;
-        int v = edge.first.second;
-        string style = edge.second.first;
-        string color = edge.second.second;
+        int u = edge.first.first, v = edge.first.second;
+        string style = edge.second.first, color = edge.second.second;
         int weight = 0;
-        // Find the weight of the edge in the adjacency list
         for (const auto& adjEdge : adjacencyList[u]) {
             if (adjEdge.first == v) {
                 weight = adjEdge.second;
                 break;
             }
         }
-        // Write the edge to the DOT file
         outFile << "    City" << u << " -- City" << v << " [style=" << style << ", color=" << color << ", label=\"" << weight << "\"];" << endl;
     }
 
@@ -267,8 +257,6 @@ void generateGraphDiagramDOT(int testCaseNumber, int numCities, int numAirports,
     // Close the output file
     outFile.close();
 }
-
-
 
 
  
