@@ -8,6 +8,8 @@
 
 using namespace std;
 
+typedef pair<int, int> PII;
+
 // Define a typedef for a pair of integers named PII
 typedef pair<int, int> PII;
 
@@ -94,10 +96,9 @@ void shortestPathFromAirports(vector<int>& distances, const vector<int>& airport
         int u = pq.top().second;
         pq.pop();
 
-        // If the vertex is already visited, skip processing its neighbors
-        if (visited[u]) {
+        // If the vertex is already visited, continue to the next iteration
+        if (visited[u])
             continue;
-        }
 
         // Mark the vertex as visited
         visited[u] = true;
@@ -108,35 +109,32 @@ void shortestPathFromAirports(vector<int>& distances, const vector<int>& airport
             int weight = neighbor.second; // Weight of the edge between u and v
 
             // If vertex v is not visited and the distance to v through u is shorter than the current distance to v
-            if (!visited[v]) {
+            if (!visited[v] && distances[u] + weight < distances[v]) {
                 // Update the distance to vertex v
-                int newDistance = distances[u] + weight;
-                if (newDistance < distances[v]) {
-                    // Clear previous parents of vertex v and add u as the new parent of v
-                    parents[v].clear();
-                    parents[v].push_back(u);
-                    // Update the distance to vertex v
-                    distances[v] = newDistance;
-                    // Push vertex v into the priority queue with its updated distance
-                    pq.push({distances[v], v});
-                } else if (newDistance == distances[v]) {
-                    // If there's another shortest path to v, add u as another parent
-                    parents[v].push_back(u);
-                }
+                distances[v] = distances[u] + weight;
+                // Clear previous parents of vertex v
+                parents[v].clear();
+                // Add u as the new parent of v
+                parents[v].push_back(u);
+                // Push vertex v into the priority queue with its updated distance
+                pq.push({distances[v], v});
+            } else if (!visited[v] && distances[u] + weight == distances[v]) {
+                // If there's another shortest path to v, add u as another parent
+                parents[v].push_back(u);
             }
         }
     }
 }
 
 
-
-    void primMaxMST(int K, vector<pair<int, pair<int, int>>>& maxProfitEdges) {
+    // Method to find the maximum profit minimum spanning tree using Prim's algorithm
+void primMaxMST(int K, vector<pair<int, pair<int, int>>>& maxProfitEdges) {
     // Initialize a boolean array to track whether vertices are in the MST
     vector<bool> inMST(numVertices, false);
     // Priority queue to store edges based on their weights (max-heap for Prim's algorithm)
     priority_queue<pair<int, pair<int, int>>> pq;
 
-    // Iterate through all edges from the first airport city
+    // Initialize by pushing all edges from the first airport city
     for (auto &edge : adjacencyList[0]) {
         // Only consider edges among the first K cities
         if (edge.first < K) {
@@ -155,7 +153,7 @@ void shortestPathFromAirports(vector<int>& distances, const vector<int>& airport
         int v = pq.top().second.second; // Vertex v of the edge
         pq.pop();
 
-        // If vertex v is already in the MST, skip processing its adjacent edges
+        // If vertex v is already in the MST, continue to the next iteration
         if (inMST[v]) {
             continue;
         }
@@ -166,19 +164,15 @@ void shortestPathFromAirports(vector<int>& distances, const vector<int>& airport
         maxProfitEdges.push_back({weight, {u, v}});
 
         // Iterate through all edges adjacent to vertex v
-        for (auto &neighbor : adjacencyList[v]) {
-            int nextVertex = neighbor.first; // Next adjacent vertex
-            int edgeWeight = neighbor.second; // Weight of the adjacent edge
-
+        for (auto &edge : adjacencyList[v]) {
             // If the adjacent vertex is not in the MST and within the first K cities
-            if (!inMST[nextVertex] && nextVertex < K) {
+            if (!inMST[edge.first] && edge.first < K) {
                 // Push the edge weight along with its vertices into the priority queue
-                pq.push({edgeWeight, {v, nextVertex}});
+                pq.push({edge.second, {v, edge.first}});
             }
         }
     }
 }
-
 
 
     // Method to set the number of vertices in the graph and resize the adjacency list
@@ -189,6 +183,8 @@ void setNumVertices(int vertices) {
     adjacencyList.resize(numVertices);
 }
 
+
+   // Method to generate a DOT file representing the graph
 void generateGraphDiagramDOT(int testCaseNumber, int numCities, int numAirports, const vector<pair<int, pair<int, int>>>& maxProfitFlights, const vector<int>& cityDistances, const vector<vector<int>>& parents) {
     // Open the output file for writing
     ofstream outFile("graph-diagram-testcase-" + to_string(testCaseNumber) + ".dot");
@@ -272,7 +268,10 @@ void generateGraphDiagramDOT(int testCaseNumber, int numCities, int numAirports,
     outFile.close();
 }
 
- 
+
+
+
+
 };
 
 int main() { // Main function
