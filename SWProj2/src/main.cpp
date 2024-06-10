@@ -8,10 +8,6 @@
 
 using namespace std;
 
-typedef pair<int, int> PII;
-
-// Define a typedef for a pair of integers named PII
-typedef pair<int, int> PII;
 
 // Define a custom class Edge representing an edge in a graph
 class Edge {
