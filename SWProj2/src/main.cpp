@@ -190,34 +190,42 @@ void setNumVertices(int vertices) {
 }
 
 void generateGraphDiagramDOT(int testCaseNumber, int numCities, int numAirports, const vector<pair<int, pair<int, int>>>& maxProfitFlights, const vector<int>& cityDistances, const vector<vector<int>>& parents) {
+    // Open the output file for writing
     ofstream outFile("graph-diagram-testcase-" + to_string(testCaseNumber) + ".dot");
+    // Check if the file was opened successfully
     if (!outFile.is_open()) {
+        // Print an error message if the file failed to open
         cerr << "Failed to open output file." << endl;
+        // Return from the function
         return;
     }
 
+    // Write the header of the DOT file
     outFile << "graph G {" << endl;
     outFile << "    graph [bgcolor=white];" << endl;
     outFile << "    node [style=filled];" << endl;
 
     // Write the nodes of the graph
     for (int i = 0; i < numCities; ++i) {
+        // Determine the fill color of the node based on whether it represents a city with an airport or without
         string fillColor = (i < numAirports) ? "darkgreen" : "lightgreen";
+        // Write the node to the DOT file
         outFile << "    City" << i << " [fillcolor=" << fillColor << ", style=filled];" << endl;
     }
 
     // Highlight the maximum profit flights by updating edge attributes
     for (const auto& flight : maxProfitFlights) {
-        int u = flight.second.first, v = flight.second.second;
-        if (u > v) swap(u, v);
+        int u = flight.second.first;
+        int v = flight.second.second;
+        if (u > v) swap(u, v); // Ensure u is smaller than v
         edgeAttributes[{u, v}] = {"dashed", "blue"}; // Update edge attribute for max profit flights
     }
 
     // Highlight the shortest paths to cities with airports by updating edge attributes
     for (int i = numAirports; i < numCities; ++i) {
-        for (int j = 0; j < parents[i].size(); ++j) {
-            int u = parents[i][j], v = i;
-            if (u > v) swap(u, v);
+        for (int parent : parents[i]) {
+            int u = parent, v = i;
+            if (u > v) swap(u, v); // Ensure u is smaller than v
             edgeAttributes[{u, v}] = {"solid", "blue"}; // Update edge attribute for shortest paths to airports
         }
     }
@@ -226,28 +234,34 @@ void generateGraphDiagramDOT(int testCaseNumber, int numCities, int numAirports,
     for (int u = 0; u < numCities; ++u) {
         for (const auto& neighbor : adjacencyList[u]) {
             int v = neighbor.first;
-            if (u >= v) continue;
-            if (edgeAttributes.find({u, v}) == edgeAttributes.end()) {
-                string style = "solid", color = "black";
-                if ((u < numAirports && v < numAirports) || (u >= numAirports && v >= numAirports)) {
-                    style = "dashed"; // Update edge attribute for edges between airport cities or non-airport cities
+            // Check if the edge attributes have not been updated yet
+            if (u < v && edgeAttributes.find({u, v}) == edgeAttributes.end()) {
+                if (u < numAirports && v < numAirports) {
+                    // Both cities have airports
+                    edgeAttributes[{u, v}] = {"dashed", "black"}; // Update edge attribute for edges between airport cities
+                } else if (u >= numAirports || v >= numAirports) {
+                    // At least one city does not have an airport
+                    edgeAttributes[{u, v}] = {"solid", "black"}; // Update edge attribute for edges between airport and non-airport cities
                 }
-                edgeAttributes[{u, v}] = {style, color};
             }
         }
     }
 
     // Write edges to the DOT file after updating edge attributes
     for (const auto& edge : edgeAttributes) {
-        int u = edge.first.first, v = edge.first.second;
-        string style = edge.second.first, color = edge.second.second;
+        int u = edge.first.first;
+        int v = edge.first.second;
+        string style = edge.second.first;
+        string color = edge.second.second;
         int weight = 0;
+        // Find the weight of the edge in the adjacency list
         for (const auto& adjEdge : adjacencyList[u]) {
             if (adjEdge.first == v) {
                 weight = adjEdge.second;
                 break;
             }
         }
+        // Write the edge to the DOT file
         outFile << "    City" << u << " -- City" << v << " [style=" << style << ", color=" << color << ", label=\"" << weight << "\"];" << endl;
     }
 
@@ -257,7 +271,6 @@ void generateGraphDiagramDOT(int testCaseNumber, int numCities, int numAirports,
     // Close the output file
     outFile.close();
 }
-
 
  
 };
