@@ -9,22 +9,6 @@
 using namespace std;
 
 
-// Define a custom class Edge representing an edge in a graph
-class Edge {
-public:
-    int u; // Source vertex of the edge
-    int v; // Destination vertex of the edge
-    int weight; // Weight of the edge
-
-    // Constructor to initialize the attributes of the Edge object
-    Edge(int u, int v, int weight) {
-        this->u = u; // Assign the source vertex
-        this->v = v; // Assign the destination vertex
-        this->weight = weight; // Assign the weight of the edge
-    }
-};
-
-
 class Graph {
 private:
     int numVertices; // Number of vertices in the graph
